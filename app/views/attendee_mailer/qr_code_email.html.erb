@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your QR Code for <%= @event.name %></title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+    }
+    .header {
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      margin: -20px -20px 20px -20px;
+    }
+    .qr-section {
+      text-align: center;
+      padding: 20px 0;
+      background: #f8f9fa;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .event-details {
+      background: #e9ecef;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .footer {
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid #dee2e6;
+      color: #6c757d;
+      font-size: 0.9em;
+    }
+    .btn {
+      display: inline-block;
+      background: #28a745;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Blackbird RSVP</h1>
+      <p>Your Check-in QR Code</p>
+    </div>
+
+    <h2>Hello <%= @attendee.first_name %>!</h2>
+    
+    <p>You're all set for <strong><%= @event.name %></strong>. Use the QR code below for quick check-in at the event.</p>
+
+    <div class="qr-section">
+      <h3>Your QR Code</h3>
+      <p><strong>Save this email or screenshot the QR code</strong></p>
+      
+      <!-- QR Code would be attached as an image -->
+      <div style="border: 2px solid #ddd; display: inline-block; padding: 10px; background: white;">
+        <p style="margin: 20px; font-size: 48px; color: #ccc;">QR CODE<br>ATTACHED</p>
+      </div>
+      
+      <p style="margin-top: 15px;">
+        <a href="<%= @attendee.qr_code_url %>" class="btn">
+          Check In Online
+        </a>
+      </p>
+      
+      <p style="font-size: 0.9em; color: #6c757d;">
+        Can't scan? Use this link: <a href="<%= @attendee.qr_code_url %>"><%= @attendee.qr_code_url %></a>
+      </p>
+    </div>
+
+    <div class="event-details">
+      <h3>Event Details</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; width: 30%;">Event:</td>
+          <td style="padding: 8px 0;"><%= @event.name %></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Date & Time:</td>
+          <td style="padding: 8px 0;"><%= @event.date.strftime("%A, %B %d, %Y at %I:%M %p") %></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Venue:</td>
+          <td style="padding: 8px 0;"><%= @event.venue %></td>
+        </tr>
+        <% if @event.venue_address.present? %>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold;">Address:</td>
+          <td style="padding: 8px 0;"><%= @event.venue_address %></td>
+        </tr>
+        <% end %>
+      </table>
+    </div>
+
+    <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <h4 style="color: #856404; margin-top: 0;">Important Notes:</h4>
+      <ul style="color: #856404; margin-bottom: 0;">
+        <li>Present this QR code at the event entrance for quick check-in</li>
+        <li>Keep this email accessible on your mobile device</li>
+        <li>If you have issues with the QR code, staff can check you in manually</li>
+        <li>Arrive 15-30 minutes early to allow time for check-in</li>
+      </ul>
+    </div>
+
+    <p>Looking forward to seeing you at the event!</p>
+
+    <div class="footer">
+      <p>
+        This email was sent by Blackbird RSVP<br>
+        If you have any questions, please contact the event organizer.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

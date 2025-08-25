@@ -1,0 +1,345 @@
+<div class="scanner-container">
+  <div class="text-center mb-4">
+    <h2><%= @event.name %></h2>
+    <p class="text-muted">QR Code Scanner</p>
+  </div>
+
+  <!-- Stats Display -->
+  <div class="row text-center mb-4">
+    <div class="col-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body py-2">
+          <h4 id="total-count"><%= @stats[:total] %></h4>
+          <small>Total</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="card bg-success text-white">
+        <div class="card-body py-2">
+          <h4 id="checked-in-count"><%= @stats[:checked_in] %></h4>
+          <small>Checked In</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body py-2">
+          <h4 id="pending-count"><%= @stats[:pending] %></h4>
+          <small>Pending</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="card bg-info text-white">
+        <div class="card-body py-2">
+          <h4 id="percentage"><%= @stats[:percentage] %>%</h4>
+          <small>Rate</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Scanner -->
+  <div class="card">
+    <div class="card-header">
+      <ul class="nav nav-tabs card-header-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="scanner-tab" data-bs-toggle="tab" data-bs-target="#scanner-pane" type="button" role="tab">
+            QR Scanner
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual-pane" type="button" role="tab">
+            Manual Check-in
+          </button>
+        </li>
+      </ul>
+    </div>
+    
+    <div class="card-body">
+      <div class="tab-content">
+        <!-- QR Scanner Tab -->
+        <div class="tab-pane fade show active" id="scanner-pane" role="tabpanel">
+          <div id="qr-scanner" class="qr-scanner">
+            <div class="text-center py-5">
+              <button id="start-scanner" class="btn btn-primary btn-lg">
+                <i class="fas fa-camera"></i> Start Scanner
+              </button>
+            </div>
+          </div>
+          
+          <div id="scanner-status" class="mt-3">
+            <div class="alert alert-info d-none" id="scanner-info"></div>
+            <div class="alert alert-success d-none" id="scanner-success"></div>
+            <div class="alert alert-danger d-none" id="scanner-error"></div>
+          </div>
+        </div>
+
+        <!-- Manual Check-in Tab -->
+        <div class="tab-pane fade" id="manual-pane" role="tabpanel">
+          <form id="manual-checkin-form">
+            <div class="mb-3">
+              <label for="search-input" class="form-label">Search Attendee</label>
+              <input type="text" class="form-control form-control-lg" id="search-input" 
+                     placeholder="Enter name or email address" autocomplete="off">
+              <div class="form-text">Search by name or email address</div>
+            </div>
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              Manual Check-in
+            </button>
+          </form>
+          
+          <div id="manual-status" class="mt-3">
+            <div class="alert alert-success d-none" id="manual-success"></div>
+            <div class="alert alert-danger d-none" id="manual-error"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Check-ins -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <h6 class="card-title mb-0">Recent Check-ins</h6>
+    </div>
+    <div class="card-body" id="recent-checkins">
+      <p class="text-muted text-center">Recent check-ins will appear here</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let html5QrcodeScanner;
+  let isScanning = false;
+
+  // Initialize scanner
+  document.getElementById('start-scanner').addEventListener('click', function() {
+    startScanner();
+  });
+
+  // Manual check-in form
+  document.getElementById('manual-checkin-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const searchTerm = document.getElementById('search-input').value.trim();
+    if (searchTerm) {
+      manualCheckIn(searchTerm);
+    }
+  });
+
+  function startScanner() {
+    if (isScanning) return;
+
+    const startButton = document.getElementById('start-scanner');
+    startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+    startButton.disabled = true;
+
+    html5QrcodeScanner = new Html5QrcodeScanner(
+      "qr-scanner",
+      { 
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+      },
+      false
+    );
+
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    isScanning = true;
+  }
+
+  function onScanSuccess(decodedText, decodedResult) {
+    // Process QR code
+    processQRCode(decodedText);
+    
+    // Stop scanner temporarily
+    html5QrcodeScanner.clear();
+    isScanning = false;
+    
+    // Restart after 3 seconds
+    setTimeout(() => {
+      if (!isScanning) {
+        startScanner();
+      }
+    }, 3000);
+  }
+
+  function onScanFailure(error) {
+    // Handle scan failure silently
+    console.log(`QR scan error: ${error}`);
+  }
+
+  function processQRCode(qrData) {
+    showScannerMessage('Processing QR code...', 'info');
+
+    fetch(`/scanner/<%= @event.id %>/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ qr_data: qrData })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showScannerMessage(data.message, 'success');
+        updateStats(data.stats);
+        addRecentCheckIn(data.attendee);
+        playSuccessSound();
+      } else {
+        showScannerMessage(data.message, 'danger');
+        if (!data.already_checked_in) {
+          playErrorSound();
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showScannerMessage('Network error. Please try again.', 'danger');
+      playErrorSound();
+    });
+  }
+
+  function manualCheckIn(searchTerm) {
+    showManualMessage('Processing...', 'info');
+
+    fetch(`/scanner/<%= @event.id %>/manual`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ search_term: searchTerm })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showManualMessage(data.message, 'success');
+        updateStats(data.stats);
+        addRecentCheckIn(data.attendee);
+        document.getElementById('search-input').value = '';
+        playSuccessSound();
+      } else {
+        showManualMessage(data.message, 'danger');
+        if (!data.already_checked_in) {
+          playErrorSound();
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showManualMessage('Network error. Please try again.', 'danger');
+      playErrorSound();
+    });
+  }
+
+  function showScannerMessage(message, type) {
+    const alertElements = ['scanner-info', 'scanner-success', 'scanner-error'];
+    alertElements.forEach(id => {
+      document.getElementById(id).classList.add('d-none');
+    });
+    
+    const alertId = `scanner-${type === 'info' ? 'info' : type === 'success' ? 'success' : 'error'}`;
+    const alertElement = document.getElementById(alertId);
+    alertElement.textContent = message;
+    alertElement.classList.remove('d-none');
+    
+    setTimeout(() => {
+      alertElement.classList.add('d-none');
+    }, 5000);
+  }
+
+  function showManualMessage(message, type) {
+    const alertElements = ['manual-success', 'manual-error'];
+    alertElements.forEach(id => {
+      document.getElementById(id).classList.add('d-none');
+    });
+    
+    const alertId = `manual-${type === 'success' ? 'success' : 'error'}`;
+    const alertElement = document.getElementById(alertId);
+    alertElement.textContent = message;
+    alertElement.classList.remove('d-none');
+    
+    setTimeout(() => {
+      alertElement.classList.add('d-none');
+    }, 5000);
+  }
+
+  function updateStats(stats) {
+    if (stats) {
+      document.getElementById('total-count').textContent = stats.total;
+      document.getElementById('checked-in-count').textContent = stats.checked_in;
+      document.getElementById('pending-count').textContent = stats.pending;
+      document.getElementById('percentage').textContent = stats.percentage + '%';
+    }
+  }
+
+  function addRecentCheckIn(attendee) {
+    const container = document.getElementById('recent-checkins');
+    if (container.querySelector('.text-muted')) {
+      container.innerHTML = '';
+    }
+
+    const checkInElement = document.createElement('div');
+    checkInElement.className = 'border-bottom pb-2 mb-2';
+    checkInElement.innerHTML = `
+      <div class="d-flex justify-content-between">
+        <div>
+          <strong>${attendee.name}</strong>
+          <br>
+          <small class="text-muted">${attendee.email}</small>
+        </div>
+        <div class="text-end">
+          <span class="badge bg-success">Checked In</span>
+          <br>
+          <small class="text-muted">${attendee.checked_in_at}</small>
+        </div>
+      </div>
+    `;
+    
+    container.insertBefore(checkInElement, container.firstChild);
+    
+    // Keep only last 5 entries
+    const entries = container.querySelectorAll('.border-bottom');
+    if (entries.length > 5) {
+      entries[entries.length - 1].remove();
+    }
+  }
+
+  function playSuccessSound() {
+    // Simple beep sound for success
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.3, context.currentTime);
+    
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.2);
+  }
+
+  function playErrorSound() {
+    // Lower pitch sound for errors
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    
+    oscillator.frequency.value = 300;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.3, context.currentTime);
+    
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.5);
+  }
+</script>

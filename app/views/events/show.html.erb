@@ -1,0 +1,287 @@
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1><%= @event.name %></h1>
+    <p class="text-muted mb-2">
+      <i class="fas fa-calendar"></i> <%= @event.date.strftime("%B %d, %Y at %I:%M %p") %>
+    </p>
+    <p class="text-muted mb-0">
+      <i class="fas fa-map-marker-alt"></i> <%= @event.venue %>
+    </p>
+  </div>
+  <div class="btn-group" role="group">
+    <%= link_to "Dashboard", dashboard_event_path(@event), class: "btn btn-primary" %>
+    <%= link_to "Scanner", scanner_path(@event), class: "btn btn-success" %>
+    <%= link_to "Edit", edit_event_path(@event), class: "btn btn-outline-secondary" %>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-center bg-primary text-white">
+      <div class="card-body">
+        <h3><%= @stats[:total] %></h3>
+        <p class="mb-0">Total Attendees</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center bg-success text-white">
+      <div class="card-body">
+        <h3><%= @stats[:checked_in] %></h3>
+        <p class="mb-0">Checked In</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center bg-warning text-white">
+      <div class="card-body">
+        <h3><%= @stats[:pending] %></h3>
+        <p class="mb-0">Pending</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center bg-info text-white">
+      <div class="card-body">
+        <h3><%= @stats[:percentage] %>%</h3>
+        <p class="mb-0">Check-in Rate</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Attendee Management -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title mb-0">Attendee Management</h6>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+          <i class="fas fa-upload"></i> Import CSV
+        </button>
+      </div>
+      <div class="card-body">
+        <% if @attendees.any? %>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Company</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @attendees.each do |attendee| %>
+                  <tr class="<%= attendee.checked_in? ? 'table-success' : '' %>">
+                    <td>
+                      <strong><%= attendee.full_name %></strong>
+                    </td>
+                    <td><%= attendee.email %></td>
+                    <td><%= attendee.company %></td>
+                    <td>
+                      <% if attendee.checked_in? %>
+                        <span class="badge bg-success">
+                          <i class="fas fa-check"></i> Checked In
+                        </span>
+                        <br>
+                        <small class="text-muted">
+                          <%= attendee.check_in_time.strftime("%I:%M %p") %>
+                        </small>
+                      <% else %>
+                        <span class="badge bg-warning">Pending</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <div class="btn-group btn-group-sm" role="group">
+                        <a href="#" class="btn btn-outline-primary btn-sm" 
+                           onclick="showQRCode('<%= attendee.qr_code_token %>'); return false;">
+                          <i class="fas fa-qrcode"></i>
+                        </a>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="resendQRCode(<%= attendee.id %>)">
+                          <i class="fas fa-envelope"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h5>No Attendees Yet</h5>
+            <p class="text-muted">Import your attendee list to get started.</p>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">
+              <i class="fas fa-upload"></i> Import CSV File
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Information -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-title mb-0">Event Details</h6>
+      </div>
+      <div class="card-body">
+        <% if @event.description.present? %>
+          <p><%= simple_format(@event.description) %></p>
+          <hr>
+        <% end %>
+        
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Date:</dt>
+          <dd class="col-sm-8"><%= @event.date.strftime("%B %d, %Y") %></dd>
+          
+          <dt class="col-sm-4">Time:</dt>
+          <dd class="col-sm-8"><%= @event.date.strftime("%I:%M %p") %></dd>
+          
+          <dt class="col-sm-4">Venue:</dt>
+          <dd class="col-sm-8"><%= @event.venue %></dd>
+          
+          <% if @event.venue_address.present? %>
+            <dt class="col-sm-4">Address:</dt>
+            <dd class="col-sm-8"><%= simple_format(@event.venue_address) %></dd>
+          <% end %>
+          
+          <% if @event.event_code.present? %>
+            <dt class="col-sm-4">Code:</dt>
+            <dd class="col-sm-8"><code><%= @event.event_code %></code></dd>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h6 class="card-title mb-0">CSV Import Template</h6>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted">Your CSV file should include these columns:</p>
+        <ul class="small">
+          <li><strong>email</strong> (required)</li>
+          <li><strong>first_name</strong> (required)</li>
+          <li><strong>last_name</strong> (required)</li>
+          <li>company (optional)</li>
+          <li>job_title (optional)</li>
+          <li>phone (optional)</li>
+        </ul>
+        <a href="#" class="btn btn-sm btn-outline-primary" onclick="downloadTemplate(); return false;">
+          <i class="fas fa-download"></i> Download Template
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Import Attendees</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <%= form_with url: import_attendees_event_path(@event), multipart: true, local: true do |form| %>
+        <div class="modal-body">
+          <div class="mb-3">
+            <%= form.label :csv_file, "Select CSV File", class: "form-label" %>
+            <%= form.file_field :csv_file, class: "form-control", accept: ".csv", required: true %>
+            <div class="form-text">
+              Upload a CSV file with your attendee list. The file should include email, first_name, and last_name columns.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <%= form.submit "Import Attendees", class: "btn btn-primary" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">QR Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="qr-code-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showQRCode(token) {
+    // Generate QR code using a library or show the check-in URL
+    const checkInUrl = `${window.location.origin}/check_in/${token}`;
+    document.getElementById('qr-code-container').innerHTML = `
+      <div class="mb-3">
+        <div class="border p-3 d-inline-block bg-white">
+          <div id="qrcode-${token}"></div>
+        </div>
+      </div>
+      <p class="small text-muted">Scan this QR code to check in</p>
+      <p class="small"><code>${checkInUrl}</code></p>
+    `;
+    
+    // Generate QR code using QRCode.js (you'd need to include this library)
+    // For now, we'll show the URL
+    
+    const modal = new bootstrap.Modal(document.getElementById('qrModal'));
+    modal.show();
+  }
+  
+  function resendQRCode(attendeeId) {
+    if (confirm('Send QR code email to this attendee?')) {
+      fetch(`/events/<%= @event.id %>/attendees/${attendeeId}/resend_qr_code`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('QR code email sent successfully!');
+        } else {
+          alert('Failed to send email. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to send email. Please try again.');
+      });
+    }
+  }
+  
+  function downloadTemplate() {
+    const csvContent = `email,first_name,last_name,company,job_title,phone
+john.doe@example.com,John,Doe,Acme Corp,Software Engineer,(555) 123-4567
+jane.smith@example.com,Jane,Smith,Tech Inc,Marketing Manager,(555) 987-6543`;
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'attendee-import-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
+</script>

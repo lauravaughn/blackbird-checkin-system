@@ -1,0 +1,11 @@
+email,first_name,last_name,company,job_title,phone
+john.doe@example.com,John,Doe,Acme Corporation,Software Engineer,(555) 123-4567
+jane.smith@techcorp.com,Jane,Smith,TechCorp Inc,Marketing Manager,(555) 987-6543
+mike.wilson@startupxyz.com,Mike,Wilson,StartupXYZ,CEO,(555) 111-2222
+sarah.jones@consulting.com,Sarah,Jones,Jones Consulting,Senior Consultant,(555) 333-4444
+david.brown@finance.com,David,Brown,Financial Partners,VP of Operations,(555) 555-6666
+lisa.garcia@design.com,Lisa,Garcia,Creative Design Studio,Art Director,(555) 777-8888
+robert.taylor@law.com,Robert,Taylor,Taylor & Associates,Partner,(555) 999-0000
+emily.davis@healthcare.com,Emily,Davis,HealthTech Solutions,Product Manager,(555) 222-3333
+james.miller@retail.com,James,Miller,Retail Innovations,Store Manager,(555) 444-5555
+amanda.white@nonprofit.org,Amanda,White,Community Foundation,Program Director,(555) 666-7777

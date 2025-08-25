@@ -1,0 +1,290 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1><%= @event.name %></h1>
+    <p class="text-muted mb-0">Real-time Check-in Dashboard</p>
+  </div>
+  <div>
+    <%= link_to "Scanner", scanner_path(@event), class: "btn btn-success me-2" %>
+    <%= link_to "Event Details", @event, class: "btn btn-outline-primary" %>
+  </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-center bg-primary text-white">
+      <div class="card-body">
+        <h2 id="total-attendees"><%= @stats[:total_attendees] %></h2>
+        <p class="mb-0">Total Attendees</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center bg-success text-white">
+      <div class="card-body">
+        <h2 id="checked-in-count"><%= @stats[:checked_in] %></h2>
+        <p class="mb-0">Checked In</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center bg-warning text-white">
+      <div class="card-body">
+        <h2 id="pending-count"><%= @stats[:pending] %></h2>
+        <p class="mb-0">Pending</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center bg-info text-white">
+      <div class="card-body">
+        <h2 id="check-in-percentage"><%= @stats[:percentage] %>%</h2>
+        <p class="mb-0">Check-in Rate</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Bar -->
+<div class="card mb-4">
+  <div class="card-body">
+    <h6 class="card-title">Check-in Progress</h6>
+    <div class="progress" style="height: 30px;">
+      <div class="progress-bar bg-success" role="progressbar" 
+           style="width: <%= @stats[:percentage] %>%" 
+           id="progress-bar">
+        <%= @stats[:percentage] %>%
+      </div>
+    </div>
+    <div class="row text-center mt-3">
+      <div class="col">
+        <small class="text-muted">
+          <span id="checked-in-text"><%= @stats[:checked_in] %></span> of 
+          <span id="total-text"><%= @stats[:total_attendees] %></span> attendees checked in
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Recent Check-ins -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title mb-0">Recent Check-ins</h6>
+        <button class="btn btn-sm btn-outline-primary" onclick="refreshDashboard()">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+      </div>
+      <div class="card-body">
+        <div id="recent-checkins">
+          <% if @recent_check_ins.any? %>
+            <% @recent_check_ins.each do |check_in| %>
+              <div class="row py-2 border-bottom">
+                <div class="col-md-6">
+                  <strong><%= check_in.attendee.full_name %></strong>
+                  <br>
+                  <small class="text-muted"><%= check_in.attendee.email %></small>
+                </div>
+                <div class="col-md-3">
+                  <span class="badge bg-<%= check_in.check_in_method == 'qr_code' ? 'primary' : 'secondary' %>">
+                    <%= check_in.check_in_method.humanize %>
+                  </span>
+                </div>
+                <div class="col-md-3 text-end">
+                  <small class="text-muted">
+                    <%= check_in.checked_in_at.strftime("%I:%M %p") %>
+                  </small>
+                </div>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="text-center text-muted py-4">
+              <i class="fas fa-clipboard-check fa-3x mb-3 opacity-50"></i>
+              <p>No check-ins yet. Start scanning QR codes to see activity here.</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Info & Quick Actions -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-title mb-0">Event Information</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Date:</dt>
+          <dd class="col-sm-8"><%= @event.date.strftime("%B %d, %Y") %></dd>
+          
+          <dt class="col-sm-4">Time:</dt>
+          <dd class="col-sm-8"><%= @event.date.strftime("%I:%M %p") %></dd>
+          
+          <dt class="col-sm-4">Venue:</dt>
+          <dd class="col-sm-8"><%= @event.venue %></dd>
+          
+          <% if @event.event_code.present? %>
+            <dt class="col-sm-4">Code:</dt>
+            <dd class="col-sm-8">
+              <code><%= @event.event_code %></code>
+            </dd>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h6 class="card-title mb-0">Quick Actions</h6>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <%= link_to "Open Scanner", scanner_path(@event), 
+                      class: "btn btn-success", target: "_blank" %>
+          <%= link_to "View All Attendees", @event, 
+                      class: "btn btn-outline-primary" %>
+          <%= link_to "Export Data", "#", 
+                      class: "btn btn-outline-secondary", 
+                      onclick: "exportData(); return false;" %>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body">
+        <h6 class="card-title">Auto-refresh</h6>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="auto-refresh" checked>
+          <label class="form-check-label" for="auto-refresh">
+            Update every 30 seconds
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let autoRefreshInterval;
+
+  // Auto-refresh functionality
+  document.getElementById('auto-refresh').addEventListener('change', function() {
+    if (this.checked) {
+      startAutoRefresh();
+    } else {
+      stopAutoRefresh();
+    }
+  });
+
+  function startAutoRefresh() {
+    autoRefreshInterval = setInterval(refreshDashboard, 30000); // 30 seconds
+  }
+
+  function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+    }
+  }
+
+  function refreshDashboard() {
+    fetch(`/api/v1/events/<%= @event.id %>/stats`)
+      .then(response => response.json())
+      .then(data => {
+        updateDashboardStats(data.stats);
+        updateRecentCheckIns(data.recent_checkins);
+      })
+      .catch(error => {
+        console.error('Error refreshing dashboard:', error);
+      });
+  }
+
+  function updateDashboardStats(stats) {
+    document.getElementById('total-attendees').textContent = stats.total_attendees;
+    document.getElementById('checked-in-count').textContent = stats.checked_in;
+    document.getElementById('pending-count').textContent = stats.pending;
+    document.getElementById('check-in-percentage').textContent = stats.percentage + '%';
+    
+    // Update progress bar
+    const progressBar = document.getElementById('progress-bar');
+    progressBar.style.width = stats.percentage + '%';
+    progressBar.textContent = stats.percentage + '%';
+    
+    // Update text
+    document.getElementById('checked-in-text').textContent = stats.checked_in;
+    document.getElementById('total-text').textContent = stats.total_attendees;
+  }
+
+  function updateRecentCheckIns(checkins) {
+    const container = document.getElementById('recent-checkins');
+    
+    if (checkins && checkins.length > 0) {
+      let html = '';
+      checkins.forEach(checkin => {
+        html += `
+          <div class="row py-2 border-bottom">
+            <div class="col-md-6">
+              <strong>${checkin.attendee.full_name}</strong>
+              <br>
+              <small class="text-muted">${checkin.attendee.email}</small>
+            </div>
+            <div class="col-md-3">
+              <span class="badge bg-${checkin.check_in_method === 'qr_code' ? 'primary' : 'secondary'}">
+                ${checkin.check_in_method.charAt(0).toUpperCase() + checkin.check_in_method.slice(1).replace('_', ' ')}
+              </span>
+            </div>
+            <div class="col-md-3 text-end">
+              <small class="text-muted">
+                ${new Date(checkin.checked_in_at).toLocaleTimeString('en-US', 
+                  { hour: 'numeric', minute: '2-digit', hour12: true })}
+              </small>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+  }
+
+  function exportData() {
+    // Simple CSV export
+    const csvContent = generateCSVContent();
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '<%= @event.name.parameterize %>-checkin-data.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
+
+  function generateCSVContent() {
+    return `Event Check-in Report
+Event: <%= @event.name %>
+Date: <%= @event.date.strftime("%B %d, %Y at %I:%M %p") %>
+Generated: ${new Date().toLocaleString()}
+
+Total Attendees: <%= @stats[:total_attendees] %>
+Checked In: <%= @stats[:checked_in] %>
+Check-in Rate: <%= @stats[:percentage] %>%
+
+Recent Check-ins:
+Name,Email,Check-in Method,Time
+<% @recent_check_ins.each do |check_in| %>
+"<%= check_in.attendee.full_name %>","<%= check_in.attendee.email %>","<%= check_in.check_in_method.humanize %>","<%= check_in.checked_in_at.strftime("%I:%M %p") %>"
+<% end %>`;
+  }
+
+  // Start auto-refresh on page load
+  startAutoRefresh();
+
+  // Clean up on page unload
+  window.addEventListener('beforeunload', function() {
+    stopAutoRefresh();
+  });
+</script>
